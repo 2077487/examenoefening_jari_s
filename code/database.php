@@ -1,18 +1,24 @@
 <?php
 class Database {
-    private $dbh;
-    public function __construct() {
+
+    public function __construct(
+         $username,
+        $password,
+        $host = 'localhost',
+        $dbname = 'examenoefening_jari_s',
+        $charset = 'utf8mb4'
+    ){
         try{
-            $dsn = "mysql:host=localhost;dbname=Examenvoorbereiding;charset=utf8";
-            $this->dbh = new PDO($dsn, 'root', '');
-        } catch (\PDOException $exception) {
+            $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
+            $this->pdo = new PDO($dsn, $username, $password);
+        } catch (PDOException $exception){
             exit('unable to connect. Error message: ' . $exception->getMessage());
         }
     }
 
     private function statement_execute($sql, $params = []): PDOStatement
 	{
-		$statement = $this->dbh->prepare($sql);
+		$statement = $this->pdo->prepare($sql);
 		$statement->execute($params);
 
 		return $statement;
@@ -42,5 +48,32 @@ class Database {
         'is_admin1' => false
     ]);
     }
+
+    public function login(string $email , string $password): void{
+        $sql = 'SELECT password, is_admin FROM user WHERE email = :email;';
+         $statement = $this->pdo->prepare($sql);
+         $statement->execute([
+            'email' => $email,
+         ]);
+    $results = $statement->fetch(PDO::FETCH_ASSOC);
+    if (!empty($results) && password_verify($password, $results['password']))
+    {
+        session_start();
+        $_SESSION['logged_in_as'] =$email;
+        $_SESSION['is_admin'] = $results['is_admin'] === true;
+        header('Location: views/user_main_page.php');
+    }
+    // else
+    // header('location: views/login_incorrect.php');
+    }
+
+    public function show_user_info(){
+        $sql = 'SELECT first_name, last_name, email, phone_number FROM user WHERE email = :email;';
+        $statement = $this->statement_execute($sql);
+    return $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    }
+
+
 }
     ?>
